@@ -1,0 +1,9 @@
+$kind: http-request
+url: http://localhost:9193/products/price-greater-than?price=10000
+method: GET
+queryParams:
+  price: "10000"
+body:
+  type: json
+  content: ""
+order: 1000
