@@ -1,0 +1,28 @@
+$kind: http-request
+description: ""
+url: http://localhost:9192/policies/1
+method: DELETE
+body:
+  type: json
+  content: "{\r
+
+    \  \"policyNumber\": \"POL1007\",\r
+
+    \  \"policyHolderName\": \"Radha Verma\",\r
+
+    \  \"policyType\": \"Health\",\r
+
+    \  \"premiumAmount\": 9000,\r
+
+    \  \"coverageAmount\": 750000,\r
+
+    \  \"startDate\": \"2026-11-18\",\r
+
+    \  \"endDate\": \"2027-11-17\",\r
+
+    \  \"nomineeName\": \"Sita Verma\",\r
+
+    \  \"policyStatus\": \"ACTIVE\"\r
+
+    }"
+order: 2000
