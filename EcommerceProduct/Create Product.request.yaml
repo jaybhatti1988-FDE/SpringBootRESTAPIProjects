@@ -1,0 +1,25 @@
+$kind: http-request
+url: http://localhost:9193/products
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"productName\": \"Wireless Color Printer\",\r
+
+    \  \"productCode\": \"PRD2351\",\r
+
+    \  \"category\": \"Electronics\",\r
+
+    \  \"price\": 5699,\r
+
+    \  \"stockQuantity\": 0,\r
+
+    \  \"brand\": \"BPCL\",\r
+
+    \  \"rating\": 4.7,\r
+
+    \  \"description\": \"Bluetooth wireless sensor Color Printer\"\r
+
+    }"
+order: 8000

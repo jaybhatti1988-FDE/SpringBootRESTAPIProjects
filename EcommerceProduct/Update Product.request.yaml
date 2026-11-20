@@ -1,0 +1,25 @@
+$kind: http-request
+url: http://localhost:9193/products/6
+method: PATCH
+body:
+  type: json
+  content: "{\r
+
+    \  \"productName\": \"Wireless Sensor Speeding Mouse\",\r
+
+    \  \"productCode\": \"PRD1151\",\r
+
+    \  \"category\": \"Electronics\",\r
+
+    \  \"price\": 1299,\r
+
+    \  \"stockQuantity\": 425,\r
+
+    \  \"brand\": \"Logitech\",\r
+
+    \  \"rating\": 4.5,\r
+
+    \  \"description\": \"Bluetooth wireless High Speed sensor mouse\"\r
+
+    }"
+order: 7000
