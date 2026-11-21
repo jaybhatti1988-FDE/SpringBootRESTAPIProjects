@@ -1,0 +1,4 @@
+$kind: http-request
+url: http://localhost:8185/tickets/date/2026-12-22
+method: GET
+order: 4000

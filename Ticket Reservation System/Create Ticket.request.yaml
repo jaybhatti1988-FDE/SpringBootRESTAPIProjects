@@ -1,0 +1,23 @@
+$kind: http-request
+url: http://localhost:8185/tickets
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \    \"passengerName\": \"Priya Shah\",\r
+
+    \    \"trainNumber\": \"12951\",\r
+
+    \    \"trainName\": \"Mumbai Rajdhani\",\r
+
+    \    \"sourceStation\": \"Mumbai Central\",\r
+
+    \    \"destinationStation\": \"New Delhi\",\r
+
+    \    \"journeyDate\": \"2026-12-16\",\r
+
+    \    \"seatNumber\": \"A1-12\"\r
+
+    \  }"
+order: 1000

@@ -1,0 +1,27 @@
+$kind: http-request
+url: http://localhost:8185/tickets/19
+method: DELETE
+body:
+  type: json
+  content: "{\r
+
+    \    \"destinationStation\": \"New Delhi\",\r
+
+    \    \"id\": 9,\r
+
+    \    \"journeyDate\": \"2026-12-28\",\r
+
+    \    \"seatNumber\": \"B1-30\",\r
+
+    \    \"sourceStation\": \"Bengaluru\",\r
+
+    \    \"ticketNumber\": \"TKT1795268473262\",\r
+
+    \    \"ticketStatus\": \"BOOKED\",\r
+
+    \    \"trainName\": \"Karnataka Express\",\r
+
+    \    \"trainNumber\": \"12627\"\r
+
+    }"
+order: 6000
