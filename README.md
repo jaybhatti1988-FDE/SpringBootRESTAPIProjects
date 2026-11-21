@@ -1,6 +1,6 @@
 # Spring Boot REST API Projects
 
-This repository contains five independent Spring Boot REST API projects:
+This repository contains five independent Spring Boot REST API projects :
 
 | # | Project | Purpose | Default Port |
 |---|---------|---------|--------------|
