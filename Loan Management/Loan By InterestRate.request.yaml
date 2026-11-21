@@ -1,0 +1,4 @@
+$kind: http-request
+url: http://localhost:8181/loans/high-interest
+method: GET
+order: 5371
