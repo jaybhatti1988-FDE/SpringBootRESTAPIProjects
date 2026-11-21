@@ -1,5 +1,0 @@
-$kind: http-request
-name: Get All Active Tele Subscribe
-url: http://localhost:8182/subscribers/active
-method: GET
-order: 2000
