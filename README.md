@@ -1,6 +1,6 @@
 # Spring Boot REST API Projects
 
-This repository contains four independent Spring Boot REST API projects:
+This repository contains five independent Spring Boot REST API projects:
 
 | # | Project | Purpose | Default Port |
 |---|---------|---------|--------------|
@@ -8,6 +8,7 @@ This repository contains four independent Spring Boot REST API projects:
 | 2 | [E-Commerce Product Management System](#2-e-commerce-product-management-system) | Manage products and inventory | `9193` |
 | 3 | [Loan Process Management System](#3-loan-process-management-system) | Manage loans, EMI and approvals | `8181` |
 | 4 | [Railway Ticket Reservation System](#4-railway-ticket-reservation-system) | Book, search and cancel train tickets | `8185` |
+| 5 | [Telecom Subscriber Management System](#5-telecom-subscriber-management-system) | Manage mobile subscribers and plans | `8182` |
 
 All projects use **Spring Boot**, **Spring Data JPA** and **Jakarta Bean Validation**. Because they use different ports, they can run at the same time.
 
@@ -51,6 +52,15 @@ All projects use **Spring Boot**, **Spring Data JPA** and **Jakarta Bean Validat
   - [Examples](#ticket-request-and-response-examples)
   - [Business Rules](#ticket-business-rules)
   - [Known Issues](#ticket-known-issues-and-improvements)
+- [5. Telecom Subscriber Management System](#5-telecom-subscriber-management-system)
+  - [Project Structure](#telecom-project-structure)
+  - [Data Model](#telecom-data-model)
+  - [Validation Rules](#telecom-validation-rules)
+  - [API Endpoints](#telecom-api-endpoints)
+  - [Examples](#telecom-request-and-response-examples)
+  - [Business Rules](#telecom-business-rules)
+  - [Sample Data (SQL)](#telecom-sample-data-sql)
+  - [Known Issues](#telecom-known-issues-and-improvements)
 - [Testing with Postman](#testing-with-postman)
 - [Future Improvements](#future-improvements)
 - [License](#license)
@@ -86,6 +96,8 @@ Adjust the folder names to match your repository.
 │   └── src/main/java/com/loan/management/process/example
 ├── railway-ticket-reservation/      # Project 4: Train tickets (port 8185)
 │   └── src/main/java/com/railway/ticket/reservation/application/example
+├── telecom-subscriber-management/   # Project 5: Telecom subscribers (port 8182)
+│   └── src/main/java/com/telecom/subscriber/management/application
 ├── postman/                         # Postman request collections
 └── README.md
 ```
@@ -197,6 +209,26 @@ spring.jpa.show-sql=true
 > Create the `TicketReservation` database first (`CREATE DATABASE IF NOT EXISTS TicketReservation;`). With `ddl-auto=update`, Hibernate creates the `ticket` table on startup.
 > Keep the database password out of source control, as with the Loan project.
 
+**Telecom Subscriber Management System** (MySQL)
+
+```properties
+spring.application.name=Telecom-Subscriber-Management-Application-Demo
+server.port=8182
+
+spring.datasource.name=TelecomSubscriber
+spring.datasource.url=jdbc:mysql://localhost:3306/TelecomSubscriber
+spring.datasource.username=root
+spring.datasource.password=<your-password>
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+```
+
+> Create the `TelecomSubscriber` database first (`CREATE DATABASE IF NOT EXISTS TelecomSubscriber;`). With `ddl-auto=update`, Hibernate creates the `subscriber` table on startup.
+> Keep the database password out of source control, as with the Loan and Ticket projects.
+
 For MySQL or PostgreSQL in the other projects, replace the datasource settings with your own URL, username, password and driver.
 
 ### Run a project
@@ -217,6 +249,7 @@ mvn spring-boot:run
 | Product  | `http://localhost:9193` |
 | Loan     | `http://localhost:8181` |
 | Ticket   | `http://localhost:8185` |
+| Telecom  | `http://localhost:8182` |
 
 ---
 
@@ -1004,6 +1037,239 @@ Invalid value for 'journeyDate'. Dates must be yyyy-MM-dd.
 
 ---
 
+# 5. Telecom Subscriber Management System
+
+A RESTful backend for managing mobile subscribers and their plans. It supports creating, reading, deleting and searching subscribers, upgrading or downgrading a plan with a partial update, a unique 10-digit mobile number, and sensible defaults for plan status and activation date.
+
+## Telecom Project Structure
+
+```
+com.telecom.subscriber.management.application
+├── TelecomSubscriberManagementApplication.java   # Application entry point
+├── controller
+│   └── SubscriberController.java                 # REST endpoints
+├── dao
+│   └── SubscriberRepository.java                 # JPA repository
+├── dto
+│   └── PlanUpdateRequest.java                    # Request body for PATCH plan
+├── entity
+│   └── Subscriber.java                           # JPA entity with validation
+└── exception
+    └── GloabalExceptionHandler.java              # Validation and request error handler
+```
+
+## Telecom Data Model
+
+**Entity: `Subscriber`** (table `subscriber`)
+
+| Field            | Type      | Description                                                  |
+|------------------|-----------|--------------------------------------------------------------|
+| `id`             | Long      | Auto-generated primary key (auto-increment)                  |
+| `mobileNumber`   | String    | Unique 10-digit mobile number (for example `9876543299`)     |
+| `customerName`   | String    | Name of the customer                                         |
+| `planType`       | String    | Plan type (for example `Basic`, `Premium`, `Student`)        |
+| `planAmount`     | Double    | Plan price                                                   |
+| `dataLimit`      | Double    | Data limit in GB                                             |
+| `callLimit`      | Integer   | Call limit in minutes                                        |
+| `smsLimit`       | Integer   | Number of SMS included                                       |
+| `activationDate` | LocalDate | Activation date (`yyyy-MM-dd`), defaults to today            |
+| `planStatus`     | String    | `ACTIVE` or `INACTIVE`, defaults to `ACTIVE`                 |
+
+## Telecom Validation Rules
+
+| Field            | Rule                                                             |
+|------------------|------------------------------------------------------------------|
+| `mobileNumber`   | Must not be blank, exactly 10 digits, and must be unique         |
+| `customerName`   | Must not be blank                                                |
+| `planType`       | Must not be blank (any text is accepted, there is no fixed list) |
+| `planAmount`     | Required and greater than 0                                      |
+| `dataLimit`      | Required and 0 or more                                           |
+| `callLimit`      | Required and 0 or more                                           |
+| `smsLimit`       | Required and 0 or more                                           |
+| `activationDate` | Optional (defaults to today), format `yyyy-MM-dd`                |
+| `planStatus`     | Optional on create (defaults to `ACTIVE`), must be `ACTIVE` or `INACTIVE` |
+
+**PATCH body (`PlanUpdateRequest`)**
+
+| Field        | Rule                           |
+|--------------|--------------------------------|
+| `planType`   | Must not be blank              |
+| `planAmount` | Required and greater than 0    |
+| `dataLimit`  | Required and 0 or more         |
+| `callLimit`  | Required and 0 or more         |
+| `smsLimit`   | Required and 0 or more         |
+
+## Telecom API Endpoints
+
+Base URL: `http://localhost:8182`
+
+| Method | Endpoint                             | Description                                   | Success | Error codes |
+|--------|--------------------------------------|-----------------------------------------------|---------|-------------|
+| POST   | `/subscribers`                       | Create a new subscriber                       | 201     | 400, 409    |
+| GET    | `/subscribers`                       | Get all subscribers                           | 200     | -           |
+| GET    | `/subscribers/active`                | Get all ACTIVE subscribers                    | 200     | -           |
+| GET    | `/subscribers/{id}`                  | Get a subscriber by ID                        | 200     | 400, 404    |
+| PATCH  | `/subscribers/{id}/plan`             | Upgrade or downgrade a plan                   | 200     | 400, 404    |
+| DELETE | `/subscribers/{id}`                  | Delete a subscriber by ID                     | 200     | 404         |
+| GET    | `/subscribers/plan-type/{planType}`  | Find subscribers by plan type (case-insensitive) | 200  | -           |
+
+## Telecom Request and Response Examples
+
+### Create a subscriber
+
+`POST /subscribers`
+
+```json
+{
+  "mobileNumber": "9876543299",
+  "customerName": "Test User",
+  "planType": "Basic",
+  "planAmount": 299,
+  "dataLimit": 1.5,
+  "callLimit": 1000,
+  "smsLimit": 100
+}
+```
+
+**Response: `201 Created`** (status defaults to `ACTIVE` and activation date to today)
+
+```json
+{
+  "id": 11,
+  "mobileNumber": "9876543299",
+  "customerName": "Test User",
+  "planType": "Basic",
+  "planAmount": 299.0,
+  "dataLimit": 1.5,
+  "callLimit": 1000,
+  "smsLimit": 100,
+  "activationDate": "2026-11-21",
+  "planStatus": "ACTIVE"
+}
+```
+
+**Response: `409 Conflict`** (duplicate mobile number)
+
+```
+Mobile number already exists: 9876543299
+```
+
+**Response: `400 Bad Request`** (validation failure, once the exception handler is registered, see Known Issues)
+
+```json
+{
+  "mobileNumber": "mobileNumber must be exactly 10 digits",
+  "planAmount": "planAmount must be positive"
+}
+```
+
+**Response: `400 Bad Request`** (malformed JSON or wrong date format in the body)
+
+```
+Invalid request body. Check the JSON and use yyyy-MM-dd for dates.
+```
+
+### Get all subscribers
+
+`GET /subscribers` returns a JSON array of all subscribers.
+
+### Get active subscribers
+
+`GET /subscribers/active` returns all subscribers whose `planStatus` is `ACTIVE`.
+
+### Get a subscriber by ID
+
+`GET /subscribers/7` returns the subscriber, or `404 Not Found` with `Subscriber not found with id: 7`.
+
+### Update a plan
+
+`PATCH /subscribers/1/plan`
+
+```json
+{
+  "planType": "Premium",
+  "planAmount": 799,
+  "dataLimit": 3,
+  "callLimit": 5000,
+  "smsLimit": 300
+}
+```
+
+**Responses**
+
+- `200 OK`: updated subscriber returned
+- `400 Bad Request`: a field is missing, blank or negative
+- `404 Not Found`: `Subscriber not found with id: 1`
+
+### Delete a subscriber by ID
+
+`DELETE /subscribers/11`
+
+- `200 OK`: `Subscriber deleted successfully with id: 11`
+- `404 Not Found`: `Subscriber not found with id: 11`
+
+### Find by plan type
+
+`GET /subscribers/plan-type/basic` returns all subscribers on that plan type. The match ignores case.
+
+## Telecom Business Rules
+
+1. **Unique mobile numbers:** creating a subscriber with an existing number returns `409 Conflict`. The number must be exactly 10 digits.
+2. **Default status:** a subscriber created without `planStatus` is saved as `ACTIVE`.
+3. **Default activation date:** if `activationDate` is not sent, today's date is used.
+4. **Plan update changes only plan fields:** `PATCH /subscribers/{id}/plan` replaces `planType`, `planAmount`, `dataLimit`, `callLimit` and `smsLimit`. Name, mobile number, activation date and status stay unchanged.
+5. **Upgrade and downgrade use the same endpoint:** there is no separate rule for the direction of the change.
+6. **ID is server-generated:** any `id` sent in a `POST` body is ignored.
+7. **Plan type search is case-insensitive:** `basic` and `Basic` return the same results.
+8. **Active list:** `/subscribers/active` returns only subscribers with status `ACTIVE`.
+
+## Telecom Sample Data (SQL)
+
+Rows inserted with raw SQL skip the controller defaults, so set `activation_date` and `plan_status` yourself:
+
+```sql
+CREATE DATABASE IF NOT EXISTS TelecomSubscriber;
+USE TelecomSubscriber;
+
+INSERT INTO subscriber
+    (mobile_number, customer_name, plan_type, plan_amount, data_limit, call_limit, sms_limit, activation_date, plan_status)
+VALUES
+    ('9876500001', 'Rahul Sharma', 'Premium',   799,  3.0, 5000, 300, '2026-08-01', 'ACTIVE'),
+    ('9876500002', 'Anita Patel',  'Basic',     299,  1.5, 1000, 100, '2026-08-15', 'ACTIVE'),
+    ('9876500003', 'Vikram Singh', 'Student',   199,  2.0,  500, 100, '2026-09-02', 'ACTIVE'),
+    ('9876500004', 'Meera Desai',  'Basic',     299,  1.5, 1000, 100, '2026-09-20', 'INACTIVE'),
+    ('9876500005', 'Kiran Mehta',  'Premium',   799,  3.0, 5000, 300, '2026-10-05', 'ACTIVE'),
+    ('9876500006', 'Arjun Joshi',  'Student',   199,  2.0,  500, 100, '2026-10-18', 'INACTIVE'),
+    ('9876500007', 'Sneha Verma',  'Basic',     299,  1.5, 1000, 100, '2026-11-03', 'ACTIVE'),
+    ('9876500008', 'Kavita Nair',  'Premium',   799,  3.0, 5000, 300, '2026-11-10', 'ACTIVE');
+```
+
+> Run the `INSERT` only once. Running it again fails on the unique `mobile_number` column.
+
+## Telecom Known Issues and Improvements
+
+- **`GloabalExceptionHandler` is not registered.** The class name is misspelled (`Gloabal`) and it has no `@RestControllerAdvice` annotation, so Spring ignores it. Validation errors, malformed JSON and bad URL values return Spring's default error response instead of the custom messages above. Fix both:
+
+  ```java
+  @RestControllerAdvice
+  public class GlobalExceptionHandler { ... }
+  ```
+
+  Rename the file to `GlobalExceptionHandler.java` as well.
+- **Hardcoded database password** in `application.properties` (`policy.txt` in the upload holds it in plain text). Move it to an environment variable or a git-ignored file before sharing the repository, and consider changing that password.
+- **Misnamed config file:** the properties and Java sources were uploaded together in a file called `policy.txt`. Keep the settings in `src/main/resources/application.properties`.
+- **`spring.jpa.properties.hibernate.dialect` is redundant.** Hibernate 6 detects the MySQL dialect automatically, so the line can be removed. `spring.datasource.name` has no effect either.
+- **Postman "Remove Tele Subscribe" sends a full subscriber body** to the DELETE endpoint, which does not read a body. It also has no request name saved in the file. Remove the body and add a name.
+- **Postman file name:** "Update  premium Tele Subscribe" has a double space in its name. Rename it to "Update Premium Tele Subscribe".
+- **No way to deactivate a subscriber.** `planStatus` can only be set on create. Neither the PATCH endpoint nor any other endpoint changes it afterwards. Consider a `PATCH /subscribers/{id}/status` endpoint.
+- **Inactive subscribers can still change plan.** Consider blocking plan updates for `INACTIVE` subscribers.
+- **`planType` accepts any text.** `Basic`, `basic` and `BASIC` can all be stored as different values. Consider a fixed list of plan types or an enum.
+- **Mobile number uniqueness is checked in code and by the database.** Two simultaneous requests could pass the code check, and the database constraint would then cause a `500` error. Consider handling `DataIntegrityViolationException` and returning `409`.
+- **No bulk delete or search by mobile number.** Consider `GET /subscribers/mobile/{mobileNumber}`.
+- **Consider adding** a `@Service` layer, pagination for list endpoints, and handling for invalid IDs on all endpoints.
+
+---
+
 ## Testing with Postman
 
 ### Policy requests (port 9192)
@@ -1079,6 +1345,35 @@ Invalid value for 'journeyDate'. Dates must be yyyy-MM-dd.
 | `PATCH /tickets/{id}/cancel` for a ticket whose journey date has passed | `400` cannot cancel after journey date |
 | Book the seat of a cancelled ticket again | `201` |
 | `GET /tickets/date/22-12-2026` | `400` dates must be yyyy-MM-dd |
+
+### Telecom requests (port 8182)
+
+| Request                        | Method | URL                                                   | Body                                      |
+|--------------------------------|--------|-------------------------------------------------------|-------------------------------------------|
+| Create Tele Subscribe          | POST   | `http://localhost:8182/subscribers`                   | JSON (subscriber fields, see above)       |
+| Get All Tele Subscribe         | GET    | `http://localhost:8182/subscribers`                   | none                                      |
+| Get All Active Tele Subscribe  | GET    | `http://localhost:8182/subscribers/active`            | none                                      |
+| Get All Basic Tele Subscribe   | GET    | `http://localhost:8182/subscribers/plan-type/basic`   | none                                      |
+| Get All Student Tele Subscribe | GET    | `http://localhost:8182/subscribers/plan-type/student` | none                                      |
+| Update Premium Tele Subscribe  | PATCH  | `http://localhost:8182/subscribers/1/plan`            | JSON (plan fields, see above)             |
+| Remove Tele Subscribe          | DELETE | `http://localhost:8182/subscribers/11`                | none                                      |
+
+**Telecom rule checks**
+
+| Test | Expected result |
+|------|-----------------|
+| `POST /subscribers` with no `planStatus` or `activationDate` | `201`, status `ACTIVE`, activation date is today |
+| `POST /subscribers` with the same `mobileNumber` twice | `409` mobile number already exists |
+| `POST /subscribers` with `"mobileNumber": "12345"` | `400` mobileNumber must be exactly 10 digits |
+| `POST /subscribers` with `"planAmount": 0` | `400` planAmount must be positive |
+| `POST /subscribers` with `"planStatus": "PAUSED"` | `400` planStatus must be ACTIVE or INACTIVE |
+| `PATCH /subscribers/1/plan` with the Premium body | `200`, plan fields updated |
+| `PATCH /subscribers/1/plan` with `"smsLimit": -1` | `400` smsLimit cannot be negative |
+| `PATCH /subscribers/9999/plan` | `404` subscriber not found |
+| `GET /subscribers/plan-type/BASIC` | Same results as `/subscribers/plan-type/basic` |
+| `GET /subscribers/abc` | `400` invalid value for 'id' |
+
+> The `400` messages above need the exception handler to be registered (see the Telecom Known Issues).
 
 **Tips**
 
