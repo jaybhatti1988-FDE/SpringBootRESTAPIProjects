@@ -1,12 +1,13 @@
 # Spring Boot REST API Projects
 
-This repository contains three independent Spring Boot REST API projects:
+This repository contains four independent Spring Boot REST API projects:
 
 | # | Project | Purpose | Default Port |
 |---|---------|---------|--------------|
 | 1 | [Policy Management System](#1-policy-management-system) | Manage insurance policies | `9192` |
 | 2 | [E-Commerce Product Management System](#2-e-commerce-product-management-system) | Manage products and inventory | `9193` |
 | 3 | [Loan Process Management System](#3-loan-process-management-system) | Manage loans, EMI and approvals | `8181` |
+| 4 | [Railway Ticket Reservation System](#4-railway-ticket-reservation-system) | Book, search and cancel train tickets | `8185` |
 
 All projects use **Spring Boot**, **Spring Data JPA** and **Jakarta Bean Validation**. Because they use different ports, they can run at the same time.
 
@@ -42,6 +43,14 @@ All projects use **Spring Boot**, **Spring Data JPA** and **Jakarta Bean Validat
   - [Business Rules](#loan-business-rules)
   - [Sample Data (SQL)](#loan-sample-data-sql)
   - [Known Issues](#loan-known-issues-and-improvements)
+- [4. Railway Ticket Reservation System](#4-railway-ticket-reservation-system)
+  - [Project Structure](#ticket-project-structure)
+  - [Data Model](#ticket-data-model)
+  - [Validation Rules](#ticket-validation-rules)
+  - [API Endpoints](#ticket-api-endpoints)
+  - [Examples](#ticket-request-and-response-examples)
+  - [Business Rules](#ticket-business-rules)
+  - [Known Issues](#ticket-known-issues-and-improvements)
 - [Testing with Postman](#testing-with-postman)
 - [Future Improvements](#future-improvements)
 - [License](#license)
@@ -75,6 +84,8 @@ Adjust the folder names to match your repository.
 │   └── src/main/java/com/ecommrce/product/mgmt/system/example
 ├── loan-process-management/         # Project 3: Loans (port 8181)
 │   └── src/main/java/com/loan/management/process/example
+├── railway-ticket-reservation/      # Project 4: Train tickets (port 8185)
+│   └── src/main/java/com/railway/ticket/reservation/application/example
 ├── postman/                         # Postman request collections
 └── README.md
 ```
@@ -166,6 +177,26 @@ spring.jpa.show-sql=true
 > Create the `LoanProcess` database first (`CREATE DATABASE IF NOT EXISTS LoanProcess;`). With `ddl-auto=update`, Hibernate creates the `loan` table on startup.
 > Do not commit real database passwords. Use an environment variable or a local, git-ignored properties file instead.
 
+**Railway Ticket Reservation System** (MySQL)
+
+```properties
+spring.application.name=Railway-Ticket-Reservation-Application-Demo
+server.port=8185
+
+spring.datasource.name=RailwayTicketReservation
+spring.datasource.url=jdbc:mysql://localhost:3306/TicketReservation
+spring.datasource.username=root
+spring.datasource.password=<your-password>
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+```
+
+> Create the `TicketReservation` database first (`CREATE DATABASE IF NOT EXISTS TicketReservation;`). With `ddl-auto=update`, Hibernate creates the `ticket` table on startup.
+> Keep the database password out of source control, as with the Loan project.
+
 For MySQL or PostgreSQL in the other projects, replace the datasource settings with your own URL, username, password and driver.
 
 ### Run a project
@@ -185,6 +216,7 @@ mvn spring-boot:run
 | Policy   | `http://localhost:9192` |
 | Product  | `http://localhost:9193` |
 | Loan     | `http://localhost:8181` |
+| Ticket   | `http://localhost:8185` |
 
 ---
 
@@ -776,6 +808,202 @@ WHERE id > 0;
 
 ---
 
+# 4. Railway Ticket Reservation System
+
+A RESTful backend for booking and managing train tickets. It supports booking, reading, cancelling, deleting and searching tickets, with automatic ticket numbers, a default `BOOKED` status, duplicate seat protection, and cancellation rules based on the journey date.
+
+## Ticket Project Structure
+
+```
+com.railway.ticket.reservation.application.example
+├── RailwayTicketReservationManagementSystemApplication.java   # Application entry point
+├── controller
+│   └── TicketController.java                                  # REST endpoints
+├── dao
+│   └── ticketReservationRepository.java                       # JPA repository
+├── entity
+│   └── Ticket.java                                            # JPA entity with validation
+└── exception
+    └── GlobalExceptionHandler.java                            # Validation and request error handler
+```
+
+## Ticket Data Model
+
+**Entity: `Ticket`** (table `ticket`)
+
+| Field                | Type      | Description                                                       |
+|----------------------|-----------|-------------------------------------------------------------------|
+| `id`                 | Long      | Auto-generated primary key (auto-increment)                       |
+| `ticketNumber`       | String    | Unique ticket number (for example `TKT1795268473262`), generated if not sent |
+| `trainNumber`        | String    | Train number (for example `12951`)                                |
+| `trainName`          | String    | Train name (for example `Mumbai Rajdhani`)                        |
+| `sourceStation`      | String    | Boarding station                                                  |
+| `destinationStation` | String    | Destination station                                               |
+| `journeyDate`        | LocalDate | Date of journey (`yyyy-MM-dd`)                                    |
+| `seatNumber`         | String    | Seat number (for example `A1-12`)                                 |
+| `ticketStatus`       | String    | `BOOKED`, `CONFIRMED` or `CANCELLED`                              |
+
+## Ticket Validation Rules
+
+| Field                | Rule                                                              |
+|----------------------|-------------------------------------------------------------------|
+| `ticketNumber`       | Optional on create (auto-generated), must be unique if sent       |
+| `trainNumber`        | Must not be blank                                                 |
+| `trainName`          | Must not be blank                                                 |
+| `sourceStation`      | Must not be blank                                                 |
+| `destinationStation` | Must not be blank, and must differ from `sourceStation` (case-insensitive) |
+| `journeyDate`        | Required, format `yyyy-MM-dd`                                     |
+| `seatNumber`         | Must not be blank                                                 |
+| `ticketStatus`       | Optional on create (defaults to `BOOKED`), must be `BOOKED`, `CANCELLED` or `CONFIRMED`; a new ticket cannot be `CANCELLED` |
+
+## Ticket API Endpoints
+
+Base URL: `http://localhost:8185`
+
+| Method | Endpoint                          | Description                                    | Success | Error codes   |
+|--------|-----------------------------------|------------------------------------------------|---------|---------------|
+| POST   | `/tickets`                        | Book a new ticket                              | 201     | 400, 409      |
+| GET    | `/tickets`                        | Get all tickets                                | 200     | -             |
+| GET    | `/tickets/{id}`                   | Get a ticket by ID                             | 200     | 404           |
+| PATCH  | `/tickets/{id}/cancel`            | Cancel a ticket                                | 200     | 400, 404, 409 |
+| DELETE | `/tickets/{id}`                   | Delete a ticket by ID                          | 200     | 404           |
+| GET    | `/tickets/train/{trainNumber}`    | Find tickets by train number (case-insensitive)| 200     | -             |
+| GET    | `/tickets/date/{journeyDate}`     | Find tickets by journey date (`yyyy-MM-dd`)    | 200     | 400           |
+
+## Ticket Request and Response Examples
+
+### Book a ticket
+
+`POST /tickets`
+
+```json
+{
+  "trainNumber": "12951",
+  "trainName": "Mumbai Rajdhani",
+  "sourceStation": "Mumbai Central",
+  "destinationStation": "New Delhi",
+  "journeyDate": "2026-12-16",
+  "seatNumber": "A1-12"
+}
+```
+
+**Response: `201 Created`** (ticket number is generated and status defaults to `BOOKED`)
+
+```json
+{
+  "id": 1,
+  "ticketNumber": "TKT1795268473262",
+  "trainNumber": "12951",
+  "trainName": "Mumbai Rajdhani",
+  "sourceStation": "Mumbai Central",
+  "destinationStation": "New Delhi",
+  "journeyDate": "2026-12-16",
+  "seatNumber": "A1-12",
+  "ticketStatus": "BOOKED"
+}
+```
+
+**Response: `409 Conflict`** (seat already booked on the same train and date)
+
+```
+Seat A1-12 is already booked on train 12951 for 2026-12-16
+```
+
+**Response: `409 Conflict`** (duplicate ticket number sent in the request)
+
+```
+Ticket number already exists: TKT1795268473262
+```
+
+**Response: `400 Bad Request`** (validation failure)
+
+```json
+{
+  "trainNumber": "must not be blank",
+  "differentStations": "sourceStation and destinationStation must be different"
+}
+```
+
+**Response: `400 Bad Request`** (new ticket sent as `CANCELLED`)
+
+```
+A new ticket must be BOOKED or CONFIRMED, not CANCELLED
+```
+
+**Response: `400 Bad Request`** (malformed JSON or wrong date format in the body)
+
+```
+Invalid request body. Check the JSON and use yyyy-MM-dd for dates.
+```
+
+### Get all tickets
+
+`GET /tickets` returns a JSON array of all tickets.
+
+### Get a ticket by ID
+
+`GET /tickets/9` returns the ticket, or `404 Not Found` with `Ticket not found with id: 9`.
+
+### Cancel a ticket
+
+`PATCH /tickets/9/cancel` (no request body needed)
+
+**Responses**
+
+- `200 OK`: updated ticket returned with `ticketStatus` set to `CANCELLED`
+- `404 Not Found`: `Ticket not found with id: 9`
+- `409 Conflict`: `Ticket is already cancelled with id: 9`
+- `400 Bad Request`: `Cannot cancel ticket after the journey date: 2026-12-28`
+
+### Delete a ticket by ID
+
+`DELETE /tickets/19`
+
+- `200 OK`: `Ticket deleted successfully with id: 19`
+- `404 Not Found`: `Ticket not found with id: 19`
+
+### Find by train number
+
+`GET /tickets/train/12301` returns all tickets for that train. The match ignores case.
+
+### Find by journey date
+
+`GET /tickets/date/2026-12-22` returns all tickets for that date.
+
+**Response: `400 Bad Request`** (wrong date format in the URL, for example `22-12-2026`)
+
+```
+Invalid value for 'journeyDate'. Dates must be yyyy-MM-dd.
+```
+
+## Ticket Business Rules
+
+1. **Ticket number:** if `ticketNumber` is missing or blank, the server generates one in the form `TKT` + current time in milliseconds. If one is sent, it must be unique, otherwise `409 Conflict`.
+2. **Default status:** a ticket created without `ticketStatus` is saved as `BOOKED`. A new ticket cannot be created as `CANCELLED` (`400 Bad Request`).
+3. **No double booking:** the same seat cannot be booked twice on the same train and journey date (train number and seat number are compared ignoring case). A seat held by a `CANCELLED` ticket can be booked again.
+4. **Different stations:** `sourceStation` and `destinationStation` must be different (compared ignoring case and surrounding spaces).
+5. **Cancellation rules:** a ticket that is already `CANCELLED` returns `409 Conflict`, and a ticket cannot be cancelled after its journey date (`400 Bad Request`). Cancelling on the journey date itself is allowed.
+6. **Cancel keeps the record:** cancelling only changes the status to `CANCELLED`. `DELETE` removes the ticket permanently.
+7. **ID is server-generated:** any `id` sent in a `POST` body is ignored.
+8. **Train number search is case-insensitive:** `12951` and the same number in a different case return the same results.
+
+## Ticket Known Issues and Improvements
+
+- **`passengerName` is not stored.** The Postman "Create Ticket" request sends `passengerName`, but the `Ticket` entity has no such field. Spring Boot ignores unknown JSON properties by default, so the value is silently dropped. Add a `passengerName` field (with `@NotBlank`) to the entity if tickets should record who is travelling.
+- **Hardcoded database password** in `application.properties`. Move it to an environment variable or a git-ignored file before sharing the repository.
+- **`spring.jpa.properties.hibernate.dialect` is redundant.** Hibernate 6 detects the MySQL dialect automatically, so the line can be removed. `spring.datasource.name` has no effect either.
+- **Postman "Cancel Ticket By Id" and "Delete Ticket By Id" send a full ticket body.** Neither endpoint reads a body, so it is ignored. Remove the body from both requests.
+- **Postman "Delete Ticket By Id" is inconsistent.** The URL deletes ticket `19`, while the body describes ticket `9`.
+- **Postman file name:** the request "Get Ticket By Train Number" is saved with a `-1` suffix (`Get Ticket By Train Number-1`). Rename or remove the duplicate.
+- **Seat uniqueness is checked only in code.** The check and the save are separate steps, so two simultaneous requests could book the same seat. Consider a database-level rule or a transaction with locking.
+- **Generated ticket numbers can collide.** Two tickets created in the same millisecond would get the same number. Consider a UUID or a database sequence.
+- **Delete is unrestricted.** A `BOOKED` or `CONFIRMED` ticket can be deleted directly. Consider allowing delete only for `CANCELLED` tickets.
+- **No endpoint to confirm a ticket.** `CONFIRMED` is accepted on create, but nothing moves a `BOOKED` ticket to `CONFIRMED`.
+- **Naming:** the repository interface `ticketReservationRepository` should start with an uppercase letter (`TicketReservationRepository`), and the parameter of `findByTrainNumberIgnoreCase` is named `ticketNumber` instead of `trainNumber`.
+- **Consider adding** a `@Service` layer, pagination for list endpoints, and a search by ticket number or source and destination.
+
+---
+
 ## Testing with Postman
 
 ### Policy requests (port 9192)
@@ -824,6 +1052,33 @@ WHERE id > 0;
 | `PATCH /loans/5/status` with `APPROVED` (4 Lakh loan) | `200`, `approvalDate` set to today |
 | `PATCH /loans/5/status` with `"DONE"` | `400` loanStatus must be PENDING, APPROVED or REJECTED |
 | `GET /loans/type/HOME` | Same results as `/loans/type/home` |
+
+### Ticket requests (port 8185)
+
+| Request                    | Method | URL                                           | Body                                  |
+|----------------------------|--------|-----------------------------------------------|---------------------------------------|
+| Create Ticket              | POST   | `http://localhost:8185/tickets`               | JSON (ticket fields, see above)       |
+| Get All Tickets            | GET    | `http://localhost:8185/tickets`               | none                                  |
+| Get Ticket By Id           | GET    | `http://localhost:8185/tickets/9`             | none                                  |
+| Cancel Ticket By Id        | PATCH  | `http://localhost:8185/tickets/9/cancel`      | none                                  |
+| Delete Ticket By Id        | DELETE | `http://localhost:8185/tickets/19`            | none                                  |
+| Get Ticket By Train Number | GET    | `http://localhost:8185/tickets/train/12301`   | none                                  |
+| Get Ticket By Date         | GET    | `http://localhost:8185/tickets/date/2026-12-22` | none                                |
+
+**Ticket rule checks**
+
+| Test | Expected result |
+|------|-----------------|
+| `POST /tickets` with no `ticketNumber` | `201`, ticket number generated, status `BOOKED` |
+| `POST /tickets` with the same train, date and seat twice | `409` seat already booked |
+| `POST /tickets` with the same `sourceStation` and `destinationStation` | `400` stations must be different |
+| `POST /tickets` with `"ticketStatus": "CANCELLED"` | `400` new ticket cannot be CANCELLED |
+| `POST /tickets` with `"journeyDate": "16-12-2026"` | `400` invalid request body |
+| `PATCH /tickets/9/cancel` on a `BOOKED` ticket | `200`, status `CANCELLED` |
+| `PATCH /tickets/9/cancel` a second time | `409` already cancelled |
+| `PATCH /tickets/{id}/cancel` for a ticket whose journey date has passed | `400` cannot cancel after journey date |
+| Book the seat of a cancelled ticket again | `201` |
+| `GET /tickets/date/22-12-2026` | `400` dates must be yyyy-MM-dd |
 
 **Tips**
 
