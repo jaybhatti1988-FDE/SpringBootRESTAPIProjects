@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get Loans
+url: http://localhost:8181/loans
+method: GET
+order: 2000

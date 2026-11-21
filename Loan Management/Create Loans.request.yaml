@@ -1,0 +1,21 @@
+$kind: http-request
+url: http://localhost:8181/loans
+method: POST
+body:
+  type: json
+  content: "{\r
+
+    \  \"loanNumber\": \"LN1021\",\r
+
+    \  \"customerName\": \"Rahul Sharma\",\r
+
+    \  \"loanType\": \"Home\",\r
+
+    \  \"loanAmount\": 500000,\r
+
+    \  \"interestRate\": 10,\r
+
+    \  \"tenureMonths\": 60\r
+
+    }"
+order: 1000

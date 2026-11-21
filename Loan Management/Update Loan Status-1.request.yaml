@@ -1,0 +1,30 @@
+$kind: http-request
+name: Update Loan Status
+url: http://localhost:8181/loans/5/status
+method: PATCH
+body:
+  type: json
+  content: "{\r
+
+    \  \"id\": 5,\r
+
+    \  \"loanNumber\": \"LN1005\",\r
+
+    \  \"customerName\": \"Kiran Mehta\",\r
+
+    \  \"loanType\": \"Education\",\r
+
+    \  \"loanAmount\": 400000.0,\r
+
+    \  \"interestRate\": 11.5,\r
+
+    \  \"tenureMonths\": 84,\r
+
+    \  \"emiAmount\": 7066.32,\r
+
+    \  \"loanStatus\": \"APPROVED\",\r
+
+    \  \"approvalDate\": \"2026-11-21\"\r
+
+    }"
+order: 8000

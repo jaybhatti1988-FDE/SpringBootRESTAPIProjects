@@ -1,0 +1,29 @@
+$kind: http-request
+url: http://localhost:8181/loans/4
+method: GET
+body:
+  type: json
+  content: "{\r
+
+    \        \"approvalDate\": null,\r
+
+    \        \"customerName\": \"Meera Desai\",\r
+
+    \        \"emiAmount\": 21695.58,\r
+
+    \        \"id\": 4,\r
+
+    \        \"interestRate\": 8.5,\r
+
+    \        \"loanAmount\": 2500000.0,\r
+
+    \        \"loanNumber\": \"LN1004\",\r
+
+    \        \"loanStatus\": \"APPROVED\",\r
+
+    \        \"loanType\": \"Home\",\r
+
+    \        \"tenureMonths\": 240\r
+
+    \    }"
+order: 4000
