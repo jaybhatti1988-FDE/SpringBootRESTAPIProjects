@@ -1,0 +1,5 @@
+$kind: http-request
+name: Get Ticket By Train Number
+url: http://localhost:8185/tickets/train/12301
+method: GET
+order: 3770
